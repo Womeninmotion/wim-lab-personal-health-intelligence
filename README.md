@@ -1,36 +1,109 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# WIM Lab #001 — Personal Health Intelligence
 
-## Getting Started
+**Can personal health data, life context and AI become useful daily intelligence?**
 
-First, run the development server:
+WIM Lab #001 is an ongoing experiment by **WendyInMotion** exploring how fragmented health data can move beyond dashboards and become contextual, realistic and actionable support for everyday life.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## The Question
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+We already have more health data than ever.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Wearables track sleep, heart rate, activity and recovery. Smart scales measure body composition. Health apps collect food, menstrual cycles and medical information.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+But a harder question remains:
 
-## Learn More
+**What does all of this mean for this person, in this context, today — and what should they realistically do next?**
 
-To learn more about Next.js, take a look at the following resources:
+## What I’m Building
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+A personal health companion that brings together:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- wearable and activity data
+- sleep and recovery
+- food and nutrition
+- body composition
+- health records and check-up reports
+- menstrual and life-stage context
+- calendar and travel
+- personal goals
+- everyday constraints and friction
+- subjective logs and feedback
 
-## Deploy on Vercel
+The goal is not to create another health score.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The goal is to help answer:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**What happened?**  
+**What matters?**  
+**What should I do next?**  
+**What should I prepare for?**  
+**Did it work?**
+
+## Core Product Loop
+
+**Know Me → Sense → Log → Understand → Review → Decide → Recommend → Act → Catch Up → Learn → Know Me Better**
+
+## Current Prototype
+
+The first prototype focuses on six product areas:
+
+- **Today** — goals, yesterday’s review, today’s priorities and upcoming context
+- **Food** — everyday eating decisions, especially realistic delivery and eating-out choices
+- **Log** — natural-language and image-based logging of meals, symptoms, events and context
+- **Trends** — meaningful changes over time, not just charts
+- **Timeline** — a longitudinal personal health story
+- **Me** — health history, check-up reports, baselines, goals, lifestyle and constraints
+
+## Product Principles
+
+### Context before scores
+
+A number means little without knowing what is happening around it.
+
+### Personal baseline before generic average
+
+The system should understand what is normal for the individual.
+
+### Action over information
+
+Health intelligence should help someone decide what to do next.
+
+### Realistic beats theoretically optimal
+
+A recommendation that does not fit real life is not useful.
+
+### Uncertainty should be visible
+
+Observed facts, possible relationships and unknowns should not be presented as the same thing.
+
+### Health is part of life
+
+Work, travel, food access, social connection and daily friction belong in the health context.
+
+## Example
+
+A structured workout does not automatically mean the day was active enough.
+
+If someone works from home, has an evening fitness class booked, but has barely moved during the day, the system may still recommend a short walk to support their daily movement goal.
+
+Likewise, an upcoming trade show or travel day may already involve substantial walking and standing — so the right recommendation may be to reduce training rather than add more.
+
+## Build Log
+
+**03 Nov 2026**  
+Defined product architecture and core user journey.
+
+**03 Nov 2026**  
+Initialized the first Next.js prototype and published the project repository.
+
+Next:
+
+- build the Today experience
+- add global logging
+- prototype food intelligence
+- build proactive Looking Ahead
+- add Daily Catch-up and Review
+
+## Status
+
+**Early prototype / active
