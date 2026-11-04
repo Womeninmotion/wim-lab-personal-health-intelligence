@@ -12,12 +12,12 @@ export function TodayView() {
     <>
       <MorningGreeting />
       <GoalsSection />
+      <TodayFocus />
       <YesterdaySection />
       <InterpretationSection />
-      <TodayFocus />
-      <TodayPlan />
       <LookingAhead />
       <NeedsInput />
+      <TodayPlan />
     </>
   );
 }

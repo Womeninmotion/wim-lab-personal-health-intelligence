@@ -22,7 +22,7 @@ function Frame({ children }: { children: React.ReactNode }) {
       <Sidebar open={navOpen} onNavigate={() => setNavOpen(false)} />
       <div className="lg:pl-[240px]">
         <TopBar onMenu={() => setNavOpen(true)} />
-        <main id="main" className="mx-auto w-full max-w-[1100px] px-4 py-8 sm:px-6 lg:px-10 lg:py-10">
+        <main id="main" className="mx-auto w-full max-w-[1320px] px-4 py-8 sm:px-6 lg:px-10 lg:py-10">
           {children}
         </main>
       </div>

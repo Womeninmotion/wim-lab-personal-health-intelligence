@@ -42,3 +42,7 @@ body {
     transition: none !important;
   }
 }
+
+/* WIM editorial dashboard refinements */
+body { font-size: 15px; line-height: 1.55; }
+button, a { transition: background-color 150ms ease, color 150ms ease; }

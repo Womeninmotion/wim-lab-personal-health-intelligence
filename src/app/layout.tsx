@@ -19,11 +19,11 @@ const poppins = Poppins({
 
 export const metadata: Metadata = {
   title: {
-    default: "今日 · Personal Health Intelligence",
-    template: "%s · Personal Health Intelligence",
+    default: "WendyInMotion · Personal Health Intelligence",
+    template: "%s | WendyInMotion Health Intelligence",
   },
   description:
-    "WendyInMotion 的个人健康情报原型。当前界面使用虚构示例，未连接设备、日历或 AI。",
+    "Wendy 的个人健康工作台：目标、运动、饮食、恢复与生活情境。当前为未接入实时数据的演示版本。",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

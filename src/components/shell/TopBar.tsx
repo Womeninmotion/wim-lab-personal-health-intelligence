@@ -1,7 +1,6 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { dataFreshness } from "@/data/demo";
 import { useAppState } from "@/components/state/AppState";
 
 const titles: Record<string, { en: string; zh: string }> = {
@@ -41,7 +40,7 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
             STATUS
           </span>
           <span className="block text-xs leading-4 text-ink/75">
-            {dataFreshness.label} · 未连接
+            演示模式 · 数据未连接
           </span>
         </p>
         <button

@@ -11,8 +11,8 @@ import type {
 
 export const dataFreshness = {
   label: "示例数据",
-  synced: "昨日 22:40 模拟同步",
-  detail: "手环、体重秤、日历和 AI 都没有连接。这里的数字是固定剧本。",
+  synced: "未连接",
+  detail: "设备、体重秤、日历和 AI 尚未接入。所有展示指标属于虚构演示案例。",
 };
 
 export const goals: Goal[] = [
@@ -78,7 +78,7 @@ export const yesterday: YesterdayDimension[] = [
     title: "睡眠",
     data: "入睡 23:40，醒来 06:55，大约 6 小时 20 分。示例深睡占比 14%，同一套示例基线大约是 18%。",
     meaning: "时长和深睡都偏紧，不够支撑在原计划之外再加高强度。",
-    relation: "和晚晚餐出现在同一晚。屏幕使用没有记录，所以不能把睡得晚归因于手机。",
+    relation: "和晚餐出现在同一晚。屏幕使用没有记录，所以不能把睡得晚归因于手机。",
   },
   {
     id: "body",
@@ -190,7 +190,7 @@ export const evidence: EvidenceItem[] = [
   },
   {
     id: "dinner-sleep",
-    claim: "晚晚餐可能让入睡更晚。",
+    claim: "晚餐可能让入睡更晚。",
     kind: "可能的关联",
     source: "晚餐时间与入睡时间",
     note: "同时出现不等于因果关系。屏幕时间没有记录。",

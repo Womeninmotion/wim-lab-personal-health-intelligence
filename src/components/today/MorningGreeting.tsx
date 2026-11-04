@@ -1,35 +1,25 @@
 "use client";
 
-import { dataFreshness } from "@/data/demo";
 import { useClientClock } from "@/lib/useClientDate";
+import { usePersonalGoals } from "@/lib/usePersonalGoals";
 
 export function MorningGreeting() {
   const clock = useClientClock();
-
+  const { goals } = usePersonalGoals();
+  const greeting = clock?.greeting ?? "你好";
   return (
-    <header className="border-b border-line pb-8">
-      <p className="inline-block bg-soft px-2 py-1 text-[11px] font-medium tracking-wide text-ink">
-        DEMO · 示例数据
-      </p>
-      <h1 className="mt-4 max-w-3xl font-display text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
-        {clock ? clock.greeting : "你好"}。先看昨天，再决定今天怎么动、怎么吃。
+    <header className="pb-7 md:pb-8">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <span className="font-display text-[10px] font-bold uppercase tracking-[0.2em] text-ink/55">YOUR HEALTH, IN CONTEXT</span>
+        <span className="border border-orange/40 bg-orange/10 px-3 py-1 text-xs font-medium text-ink">演示模式 · 未连接健康数据</span>
+      </div>
+      <h1 className="mt-5 font-display text-[clamp(2rem,3.2vw,3.1rem)] font-bold leading-tight tracking-tight">
+        {goals.displayName}，{greeting}。
       </h1>
-      <p className="mt-4 max-w-3xl text-base leading-8 text-ink/80">
-        {clock
-          ? `现在是你的本地时间，${clock.dateText}（${clock.timeZone}）。`
-          : "正在读取你的本地时间。"}
-        这份简报用的是一位虚构人物：在家工作，晚饭常常外卖，晚上可能有一节已经排好的训练。数字不是你的体检或设备数据。
+      <p className="mt-3 max-w-2xl text-[15px] leading-7 text-ink/70">
+        先看看目标走到哪儿，再回顾昨天，决定今天做什么。
       </p>
-      <dl className="mt-6 grid gap-4 border border-line bg-white p-4 sm:grid-cols-[auto_1fr] sm:gap-x-8">
-        <dt lang="en" className="font-display text-[11px] font-semibold tracking-[0.16em] text-ink/50">
-          STATUS
-        </dt>
-        <dd className="text-sm leading-6">
-          <span className="font-medium">{dataFreshness.label}</span>
-          <span className="text-ink/75"> · {dataFreshness.synced}</span>
-          <span className="mt-1 block text-ink/70">{dataFreshness.detail}</span>
-        </dd>
-      </dl>
+      <p className="mt-3 text-xs text-ink/55">{clock?.dateText ?? ""} · 当前数据源尚未接入，以下健康回顾为演示案例，不代表你的实际状态。</p>
     </header>
   );
 }
