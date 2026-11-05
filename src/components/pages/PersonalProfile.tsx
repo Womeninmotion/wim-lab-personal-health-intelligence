@@ -27,6 +27,7 @@ export function PersonalProfile() {
         <button type="submit" className="bg-orange px-5 py-3 text-sm font-bold">保存目标</button>
         {saved && <p className="text-sm font-medium" role="status">已保存到当前浏览器。返回 Today 可查看更新。</p>}
       </form>
+      <button type="button" onClick={async () => { await fetch("/api/auth/logout", { method: "POST" }); window.location.assign("/"); }} className="mt-8 border border-line px-4 py-2 text-sm">退出登录</button>
       <div className="mt-8 border-t border-line pt-5"><h2 className="font-display text-lg font-bold">我的健康记录</h2><p className="mt-2 text-sm leading-7 text-ink/70">体检报告上传、用药、月经周期、个人基线和设备连接尚未实现。下一阶段需先完成登录及私有文件存储，不能把报告放入公开 GitHub。</p></div>
     </section>
   );

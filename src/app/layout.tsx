@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Montserrat, Poppins } from "next/font/google";
 import { AppShell } from "@/components/shell/AppShell";
+import { LoginGate } from "@/components/auth/LoginGate";
+import { getVerifiedOwner } from "@/lib/server-auth";
 import "./globals.css";
 
 const montserrat = Montserrat({
@@ -23,10 +25,11 @@ export const metadata: Metadata = {
     template: "%s | WendyInMotion Health Intelligence",
   },
   description:
-    "Wendy 的个人健康工作台：目标、运动、饮食、恢复与生活情境。当前为未接入实时数据的演示版本。",
+    "Wendy 的私人健康工作台：个人目标、真实身体测量与来源可追溯的健康记录。",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const owner = await getVerifiedOwner();
   return (
     <html lang="zh-Hans" className={`${montserrat.variable} ${poppins.variable} h-full antialiased`}>
       <head>
@@ -38,7 +41,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         />
       </head>
       <body className="min-h-full font-body">
-        <AppShell>{children}</AppShell>
+        {owner ? <AppShell>{children}</AppShell> : <LoginGate />}
       </body>
     </html>
   );
