@@ -70,8 +70,14 @@ async function mcpCall(token:string,method:string,params:Record<string,unknown>,
   const texts=(obj.result?.content||[]).filter(x=>x.type==='text').map(x=>x.text||'');
   // Structured MCP responses may omit content[]; do not treat them as an empty activity list.
   const structured=(obj.result as {structuredContent?:unknown}|undefined)?.structuredContent;
+  // MCP initialize returns server capabilities/protocolVersion, not content[].
+  // Treat its successful JSON-RPC result as a handshake, not as an empty tool result.
+  if(method==='initialize'){
+    if(!obj.result || typeof obj.result!=='object')throw new Error('COROS_MCP_INITIALIZE_INVALID_RESULT');
+    return {text:'',sessionId:newSession};
+  }
   const raw=texts.length?texts.join('\n'):structured?JSON.stringify(structured):'';
-  if(!raw.trim())throw new Error('COROS_MCP_TOOL_EMPTY_RESPONSE');
+  if(!raw.trim())throw new Error(method==='tools/call'?'COROS_MCP_TOOL_EMPTY_RESPONSE':'COROS_MCP_EMPTY_RESPONSE');
   return {text:normalizeCorosText(raw),sessionId:newSession};
 }
 async function sessions(creds:StoredCredentials){
