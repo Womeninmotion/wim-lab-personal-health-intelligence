@@ -4,7 +4,31 @@ import {decrypt,ensureToken,readConnection,patchConnection,baseEnv,type StoredCr
 type Activity={coros_label_id:string;sport_type:number;activity_type:string;started_at:string;distance_km:number;ascent_m:number|null;duration_seconds:number|null;import_method:string};
 function safeDate(n:string){const date=new Date(n+'T12:00:00+08:00');return Number.isFinite(date.getTime())?date.toISOString():null;}
 function hmsToSec(str:string){const p=str.split(':').map(Number);return p.length===3?p[0]*3600+p[1]*60+p[2]:p.length===2?p[0]*60+p[1]:null;}
-export function parseList(text:string):Activity[]{
+/** COROS MCP may return a plain string, a JSON-quoted string, or a text wrapper. */
+export function normalizeCorosText(input:string):string {
+  let value=input.trim();
+  for(let i=0;i<3;i++){
+    try {
+      const parsed=JSON.parse(value) as unknown;
+      if(typeof parsed==='string'){value=parsed.trim();continue;}
+      if(parsed && typeof parsed==='object'){
+        const o=parsed as Record<string,unknown>;
+        const inner=o.text??o.content??o.result??o.data;
+        if(typeof inner==='string'){value=inner.trim();continue;}
+        if(Array.isArray(inner)){
+          const texts=inner.flatMap(x=>x&&typeof x==='object'&&typeof (x as {text?:unknown}).text==='string'?[(x as {text:string}).text]:[]);
+          if(texts.length){value=texts.join('\n');continue;}
+        }
+      }
+    }catch{}
+    break;
+  }
+  // A few MCP proxies escape line breaks without quoting the enclosing string.
+  if(!value.includes('\n')&&value.includes('\\n'))value=value.replace(/\\r\\n|\\n/g,'\n');
+  return value.replace(/\r\n/g,'\n');
+}
+export function parseList(raw:string):Activity[]{
+  const text=normalizeCorosText(raw);
   const blocks=text.split(/\n(?=\d+\.\s)/);
   const result:Activity[]=[];
   for(const block of blocks){
@@ -44,7 +68,11 @@ async function mcpCall(token:string,method:string,params:Record<string,unknown>,
   const obj=payload as {error?:{message?:string};result?:{content?:Array<{type:string;text?:string}>;isError?:boolean}};
   if(obj.error||obj.result?.isError)throw new Error('COROS_MCP_TOOL_ERROR_'+(obj.error?.message||''));
   const texts=(obj.result?.content||[]).filter(x=>x.type==='text').map(x=>x.text||'');
-  return {text:texts.join('\n'),sessionId:newSession};
+  // Structured MCP responses may omit content[]; do not treat them as an empty activity list.
+  const structured=(obj.result as {structuredContent?:unknown}|undefined)?.structuredContent;
+  const raw=texts.length?texts.join('\n'):structured?JSON.stringify(structured):'';
+  if(!raw.trim())throw new Error('COROS_MCP_TOOL_EMPTY_RESPONSE');
+  return {text:normalizeCorosText(raw),sessionId:newSession};
 }
 async function sessions(creds:StoredCredentials){
   const init=await mcpCall(creds.tokens.access_token,'initialize',{protocolVersion:'2025-06-18',capabilities:{},clientInfo:{name:'WendyInMotion Lab',version:'0.8.0'}});
@@ -64,8 +92,14 @@ export async function syncCoros(){
     const today=new Date();const start=new Date(today.getTime()-14*86400000);
     const format=(d:Date)=>{const p=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(d);const part=(k:string)=>p.find(x=>x.type===k)?.value||'';return part('year')+part('month')+part('day')};
     const list=await mcpCall(creds.tokens.access_token,'tools/call',{name:'querySportRecords',arguments:{startDate:format(start),endDate:format(today),sportTypeCodes:[100,101,102,103,104,105],limit:25}},session);
-    const entries=parseList(list.text);let detailed=0;
-    if(entries.length===0 && /\n\s*1\.\s+/.test(list.text))throw new Error('COROS_RECORD_FORMAT_UNRECOGNIZED');
+    const normalized=normalizeCorosText(list.text);
+    const entries=parseList(normalized);let detailed=0;
+    // A valid empty result must be explicit; any unrecognized/partial response is a failed sync.
+    const reported=normalized.match(/(?:Sport Records[^\n]*?\(|\()\s*(\d+)\s+records?\s*\)/i);
+    const expected=reported?Number(reported[1]):null;
+    if(expected!==null && entries.length!==expected)throw new Error(`COROS_RECORD_PARSE_MISMATCH_${entries.length}_OF_${expected}`);
+    const explicitEmpty=/(?:\b0\s+records?\b|no\s+(?:sport\s+)?(?:records|activities)\s+(?:found|available)|no\s+(?:matching\s+)?(?:records|activities))/i.test(normalized);
+    if(entries.length===0 && !explicitEmpty)throw new Error('COROS_RECORD_RESPONSE_UNRECOGNIZED');
     const {base,key,owner}=baseEnv();
     const existingUrl=new URL('/rest/v1/coros_activities',base);
     existingUrl.searchParams.set('select','coros_label_id,ascent_m');
@@ -73,6 +107,8 @@ export async function syncCoros(){
     const existingRes=await fetch(existingUrl,{headers:{apikey:key,Authorization:'Bearer '+key},cache:'no-store'});
     if(!existingRes.ok)throw new Error('COROS_EXISTING_ACTIVITY_READ_'+existingRes.status);
     const known=new Map((await existingRes.json() as Array<{coros_label_id:string;ascent_m:number|null}>).map(a=>[a.coros_label_id,a.ascent_m]));
+    const alreadyKnown=entries.filter(a=>known.has(a.coros_label_id)).length;
+    const newlyFound=entries.length-alreadyKnown;
     // Only fetch details when elevation is not known. This reduces API load and Vercel duration.
     const needDetail=entries.filter(a=>known.get(a.coros_label_id)==null);
     for(let i=0;i<needDetail.length;i+=4){
@@ -89,7 +125,7 @@ export async function syncCoros(){
       if(!db.ok)throw new Error('COROS_ACTIVITY_SAVE_'+db.status);
     }
     await patchConnection({last_success_at:now,last_sync_count:entries.length,last_error:null});
-    return {connected:true,synced:entries.length,detailsFetched:detailed,rangeDays:14,at:now};
+    return {connected:true,synced:entries.length,fetched:entries.length,newRecords:newlyFound,existingRecords:alreadyKnown,detailsFetched:detailed,rangeDays:14,at:now};
   }catch(e){const message=e instanceof Error?e.message:'UNKNOWN_SYNC_FAILURE';
     await patchConnection({last_error:message.slice(0,160)}).catch(()=>{});
     throw new Error(message);
