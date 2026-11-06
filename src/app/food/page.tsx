@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Placeholder } from "@/components/pages/Placeholder";
 
-export const metadata: Metadata = { title: "饮食" };
+export const metadata: Metadata = { title: "Food" };
 
 export default function Page() {
   return (

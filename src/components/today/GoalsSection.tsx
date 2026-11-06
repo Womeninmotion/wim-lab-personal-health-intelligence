@@ -1,50 +1,56 @@
 "use client";
-
 import Link from "next/link";
-import { daysUntil } from "@/lib/personalGoals";
+import { daysUntil, weightGoalProgress } from "@/lib/personalGoals";
 import { usePersonalGoals } from "@/lib/usePersonalGoals";
-import { SectionHeader } from "@/components/ui/SectionHeader";
-import { latestOf, timeInShenzhen, usePrivateMeasurements } from "@/lib/usePrivateMeasurements";
+import { latestOf, timeInShenzhen, type Measurement } from "@/lib/usePrivateMeasurements";
 
-export function GoalsSection() {
-  const { goals, ready } = usePersonalGoals();
+function MicroProgress({ percent, label }: { percent: number | null; label: string }) {
+  return <div className="mt-2" aria-label={label}>
+    <div className="h-[5px] w-full overflow-hidden rounded-full bg-[#eee8e2]">
+      {percent !== null && <div className="h-full rounded-full bg-[#EE793D]" style={{width:`${Math.max(0,Math.min(100,percent))}%`}} />}
+    </div>
+  </div>;
+}
+function ProgressValue({ current, start, target, unit }: {current: number|undefined; start: number; target: number; unit: string}) {
+  const progress = current !== undefined ? weightGoalProgress(start,current,target) : null;
+  return <>
+    <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+      <span className="font-display text-lg font-semibold tabular-nums">{current === undefined ? "—" : current.toFixed(unit === 'kg' ? 2 : 1)} <span className="text-xs font-normal text-ink/60">{unit}</span></span>
+      <span className="text-xs text-ink/65">目标 {Number.isFinite(target) && target>0? `${target} ${unit}` : '未设定'}</span>
+    </div>
+    <MicroProgress percent={progress?.percent ?? null} label={`目标完成度 ${progress?.percent.toFixed(0) ?? '待设定'}%`} />
+    <p className="mt-1.5 text-xs leading-5 text-ink/65">{progress ? `完成 ${progress.percent.toFixed(0)}% · 已改善 ${Math.max(0,progress.lost).toFixed(unit === 'kg'?2:1)} ${unit}${unit==='%'?'（百分点）':''} · 还差 ${progress.remaining.toFixed(unit==='kg'?2:1)} ${unit}${unit==='%'?'（百分点）':''}` : '需在 Me 中设定起点和目标，才能计算进度'}</p>
+  </>;
+}
+export function GoalsSection({measurements,loading,error}:{measurements:Measurement[];loading:boolean;error:string}) {
+  const {goals,ready} = usePersonalGoals();
   const days = ready ? daysUntil(goals.eventDate) : null;
-  const stepGoal = Number(goals.dailySteps) || 8000;
-  const { measurements, loading, error } = usePrivateMeasurements();
-  const weight = latestOf(measurements, 'weight_kg');
-  const fat = latestOf(measurements, 'body_fat_pct');
-  const target = Number(goals.goalWeight);
-  const difference = weight && Number.isFinite(target) && target > 0 ? weight.value - target : null;
-  return (
-    <section aria-labelledby="goals-heading" className="mb-8">
-      <SectionHeader id="goals-heading" en="MY GOALS" zh="我的目标" />
-      <div className="grid gap-3 lg:grid-cols-2">
-        <article className="flex flex-col justify-between border border-line bg-white p-5 md:p-6">
-          <div>
-            <div className="flex items-center justify-between gap-2"><span className="text-xs font-semibold tracking-wide text-ink/60">01 · 越野备赛</span><span className="text-xs text-ink/55">重要长期目标</span></div>
-            <h3 className="mt-3 font-display text-xl font-bold">{goals.eventName}</h3>
-            <p className="mt-4 font-display text-4xl font-bold tracking-tight text-ink">
-              {days === null ? "待确认" : days >= 0 ? `${days} 天` : "赛事已过"}
-            </p>
-            <p className="mt-1 text-sm text-ink/65">{days === null ? "填写比赛日期后，自动显示倒计时" : `比赛日期：${goals.eventDate}`}</p>
-          </div>
-          <p className="mt-5 border-t border-line pt-4 text-sm leading-6 text-ink/70">跑量、爬升、力量训练和恢复进度将在真实训练数据接入后展示。</p>
-        </article>
-        <article className="flex flex-col justify-between border border-line bg-white p-5 md:p-6">
-          <div>
-            <div className="flex items-center justify-between gap-2"><span className="text-xs font-semibold tracking-wide text-ink/60">02 · 减重与身体成分</span><span className="text-xs text-ink/55">与备赛共同管理</span></div>
-            <h3 className="mt-3 font-display text-xl font-bold">稳步减重，不牺牲训练恢复</h3>
-            <p className="mt-4 font-display text-4xl font-bold tracking-tight">{goals.goalWeight || "—"}<span className="ml-2 text-base font-medium text-ink/60">kg 目标</span></p>
-            <p className="mt-2 text-sm font-semibold text-ink">{loading ? '正在读取最新体重…' : error ? error : weight ? `实测 ${weight.value.toFixed(2)} kg · ${timeInShenzhen(weight.measured_at)}（深圳时间）` : '暂无小米 S800 体重记录'}</p>
-            {weight && <p className="mt-1 text-sm text-ink/65">{difference === null ? '请确认目标体重' : difference > 0 ? `距离目标还差 ${difference.toFixed(2)} kg` : difference === 0 ? '已达到当前体重目标' : `较目标低 ${Math.abs(difference).toFixed(2)} kg`} · 体脂率 {fat ? `${fat.value.toFixed(1)}%` : '待同步'}</p>}
-          </div>
-          <p className="mt-5 border-t border-line pt-4 text-sm leading-6 text-ink/70">小米 S800 · Mi Fitness。单次体脂估算存在波动；训练备赛期间不根据短期变化建议快速减重。</p>
-        </article>
+  const weight=latestOf(measurements,'weight_kg');
+  const fat=latestOf(measurements,'body_fat_pct');
+  const weightStart=goals.startWeight?Number(goals.startWeight):NaN;
+  const fatStart=goals.startBodyFat?Number(goals.startBodyFat):NaN;
+  const goalWeight=goals.goalWeight?Number(goals.goalWeight):NaN;
+  const fatTarget=goals.goalBodyFat?Number(goals.goalBodyFat):NaN;
+  return <section className="mb-7 border-y border-line py-4" aria-label="我的核心目标进度">
+    <div className="mb-4 flex items-center justify-between"><h2 className="text-sm font-semibold">我的目标 <span className="ml-1 text-xs font-normal text-ink/50">/ GOAL PROGRESS</span></h2><Link className="text-xs underline decoration-orange underline-offset-4" href="/me">调整目标</Link></div>
+    <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
+      <div className="lg:border-r lg:border-line lg:pr-7">
+        <div className="flex flex-wrap items-baseline justify-between gap-2"><h3 className="text-sm font-semibold">{goals.eventName || 'UTMB 50K'}</h3><span className="text-sm font-semibold">{days===null ? '赛期未设定' : days>=0 ? `还有 ${days} 天` : '赛事日期已过'}</span></div>
+        <p className="mt-1 text-xs text-ink/55">跑量与爬升，比时间倒计时更能反映备赛执行</p>
+        <div className="mt-3 grid grid-cols-2 gap-4">
+          <div><div className="flex flex-wrap justify-between gap-1 text-xs"><span className="text-ink/65">本周跑量</span><span className="font-medium">— / {goals.weeklyRunKm ? `${goals.weeklyRunKm} km` : '未设目标'}</span></div><MicroProgress percent={null} label="跑量未接入" /></div>
+          <div><div className="flex flex-wrap justify-between gap-1 text-xs"><span className="text-ink/65">本周爬升</span><span className="font-medium">— / {goals.weeklyAscentM ? `${goals.weeklyAscentM} m` : '未设目标'}</span></div><MicroProgress percent={null} label="爬升未接入" /></div>
+        </div>
+        <p className="mt-2 text-xs leading-5 text-ink/55">COROS 运动记录尚未接入本站，实际值和进度不推测、不填零。</p>
       </div>
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border border-line bg-white px-5 py-4">
-        <div><p className="text-sm font-semibold">日常活动目标 · {stepGoal.toLocaleString("zh-CN")} 步/天</p><p className="mt-1 text-xs text-ink/65">在家办公时，训练课程不等于全天活动量。真实达标率待同步。</p></div>
-        <Link href="/me" className="border-b-2 border-orange pb-1 text-sm font-semibold">编辑我的目标 →</Link>
+      <div>
+        <h3 className="text-sm font-semibold">体重与体脂 <span className="ml-1 text-xs font-normal text-ink/50">小米 S800</span></h3>
+        <div className="mt-2 grid grid-cols-2 gap-4">
+          <div><p className="text-xs text-ink/60">体重</p><ProgressValue current={weight?.value} start={weightStart} target={goalWeight} unit="kg"/></div>
+          <div><p className="text-xs text-ink/60">体脂率（设备估算）</p><ProgressValue current={fat?.value} start={fatStart} target={fatTarget} unit="%"/></div>
+        </div>
+        <p className="mt-2 text-xs text-ink/55">{loading?'正在读取最新数据…':error?`读取异常：${error}`: weight?`最近称重：${timeInShenzhen(weight.measured_at)} · Mi Fitness`:'暂未收到称重数据'}。单次体脂波动不等于脂肪增减。</p>
       </div>
-    </section>
-  );
+    </div>
+  </section>;
 }

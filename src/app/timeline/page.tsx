@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Placeholder } from "@/components/pages/Placeholder";
 
-export const metadata: Metadata = { title: "时间线" };
+export const metadata: Metadata = { title: "Timeline" };
 
 export default function Page() {
   return (

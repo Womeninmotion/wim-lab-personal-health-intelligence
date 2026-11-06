@@ -18,6 +18,18 @@ export async function GET() {
     const upstream = await fetch(endpoint, { headers: { apikey: secret, Authorization: `Bearer ${secret}` }, cache:'no-store', signal: AbortSignal.timeout(10000) });
     if (!upstream.ok) return NextResponse.json({ error: 'database_read_failed' }, { status: 502 });
     const rows = await upstream.json();
-    return NextResponse.json({ measurements: rows, source: 'Mi Fitness / 小米 S800（用户确认）' }, { headers: { 'Cache-Control': 'private, no-store', 'X-Robots-Tag': 'noindex' } });
+    // Upload time is different from measurement time. Read it separately and report both.
+    let lastIngestAt: string | null = null;
+    try {
+      const ingests = new URL('/rest/v1/health_ingest_events', url);
+      ingests.searchParams.set('select','received_at');
+      ingests.searchParams.set('user_id', `eq.${owner.id}`);
+      ingests.searchParams.set('source','eq.health_auto_export');
+      ingests.searchParams.set('order','received_at.desc');
+      ingests.searchParams.set('limit','1');
+      const ingested = await fetch(ingests, { headers: { apikey:secret, Authorization:`Bearer ${secret}` }, cache:'no-store', signal:AbortSignal.timeout(8000) });
+      if (ingested.ok) { const history = await ingested.json() as {received_at:string}[]; lastIngestAt = history[0]?.received_at ?? null; }
+    } catch { /* no upload time; measurement remains available */ }
+    return NextResponse.json({ measurements: rows, lastIngestAt, source: 'Mi Fitness / 小米 S800（用户确认）' }, { headers: { 'Cache-Control': 'private, no-store', 'X-Robots-Tag': 'noindex' } });
   } catch { return NextResponse.json({ error: 'database_unreachable' }, { status: 502 }); }
 }

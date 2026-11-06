@@ -6,14 +6,26 @@ export type PersonalGoals = {
   eventDate: string;
   goalWeight: string;
   dailySteps: string;
+  startWeight: string;
+  startDate: string;
+  startBodyFat: string;
+  goalBodyFat: string;
+  weeklyRunKm: string;
+  weeklyAscentM: string;
 };
 
 export const defaultPersonalGoals: PersonalGoals = {
   displayName: "Wendy",
   eventName: "UTMB 50K 越野赛",
-  eventDate: "", // 未核实赛事日期，必须由本人确认
-  goalWeight: "53", // 此前讨论过的目标，需要本人确认或更新
+  eventDate: "2027-01-09",
+  goalWeight: "51",
   dailySteps: "8000",
+  startWeight: "",
+  startDate: "",
+  startBodyFat: "",
+  goalBodyFat: "",
+  weeklyRunKm: "",
+  weeklyAscentM: "",
 };
 
 export function readPersonalGoals(): PersonalGoals {
@@ -21,17 +33,27 @@ export function readPersonalGoals(): PersonalGoals {
   try {
     const raw = localStorage.getItem(personalGoalsStorageKey);
     if (!raw) return defaultPersonalGoals;
-    const parsed = JSON.parse(raw) as Partial<PersonalGoals>;
-    return { ...defaultPersonalGoals, ...parsed };
-  } catch {
-    return defaultPersonalGoals;
-  }
+    return { ...defaultPersonalGoals, ...(JSON.parse(raw) as Partial<PersonalGoals>) };
+  } catch { return defaultPersonalGoals; }
 }
 
+// Local cache is a convenience only. Saving to Supabase is the authoritative operation.
 export function savePersonalGoals(goals: PersonalGoals) {
   if (typeof window === "undefined") return;
   localStorage.setItem(personalGoalsStorageKey, JSON.stringify(goals));
   window.dispatchEvent(new Event("wim-goals-updated"));
+}
+
+export function weightGoalProgress(start: number, current: number, target: number) {
+  if (![start, current, target].every(Number.isFinite) || start <= target || target <= 0 || current <= 0) return null;
+  const total = start - target;
+  const lost = start - current;
+  const remaining = Math.max(0, current - target);
+  return {
+    total, lost, remaining,
+    percent: Math.min(100, Math.max(0, (lost / total) * 100)),
+    reached: current <= target,
+  };
 }
 
 export function daysUntil(dateString: string): number | null {

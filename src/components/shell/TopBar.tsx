@@ -40,7 +40,7 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
             STATUS
           </span>
           <span className="block text-xs leading-4 text-ink/75">
-            演示模式 · 数据未连接
+            身体测量已接入 · 其他数据待接入
           </span>
         </p>
         <button

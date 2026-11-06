@@ -44,7 +44,7 @@ export function Sidebar({
           <p className="mt-4 font-display text-sm font-semibold leading-5">
             Personal Health Intelligence
           </p>
-          <p className="mt-1 text-xs leading-5 text-ink/65">Wendy 的个人健康工作台</p>
+          <p className="mt-1 text-xs leading-5 text-ink/65">个人健康情报 · 原型</p>
         </div>
         <nav aria-label="主导航" className="flex flex-1 flex-col py-3">
           {items.map((item) => {
@@ -71,7 +71,7 @@ export function Sidebar({
           })}
         </nav>
         <p className="border-t border-line px-5 py-4 text-[11px] leading-5 text-ink/55">
-          演示版 · 尚未连接真实健康数据与日历。
+          小米 S800 已接入 · 其他来源仍需授权和验证。
         </p>
       </aside>
     </>
