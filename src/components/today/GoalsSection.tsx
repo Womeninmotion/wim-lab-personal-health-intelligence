@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useCorosActivities, weeklyRunAndAscent } from "@/lib/useCorosActivities";
 import { daysUntil, weightGoalProgress } from "@/lib/personalGoals";
 import { usePersonalGoals } from "@/lib/usePersonalGoals";
 import { latestOf, timeInShenzhen, type Measurement } from "@/lib/usePrivateMeasurements";
@@ -24,6 +25,11 @@ function ProgressValue({ current, start, target, unit }: {current: number|undefi
 }
 export function GoalsSection({measurements,loading,error}:{measurements:Measurement[];loading:boolean;error:string}) {
   const {goals,ready} = usePersonalGoals();
+  const coros = useCorosActivities();
+  const week = weeklyRunAndAscent(coros.activities);
+  const runTarget = Number(goals.weeklyRunKm);
+  const ascentTarget = Number(goals.weeklyAscentM);
+  const hasRun = coros.activities.length>0 && !coros.loading && !coros.error;
   const days = ready ? daysUntil(goals.eventDate) : null;
   const weight=latestOf(measurements,'weight_kg');
   const fat=latestOf(measurements,'body_fat_pct');
@@ -38,10 +44,10 @@ export function GoalsSection({measurements,loading,error}:{measurements:Measurem
         <div className="flex flex-wrap items-baseline justify-between gap-2"><h3 className="text-sm font-semibold">{goals.eventName || 'UTMB 50K'}</h3><span className="text-sm font-semibold">{days===null ? '赛期未设定' : days>=0 ? `还有 ${days} 天` : '赛事日期已过'}</span></div>
         <p className="mt-1 text-xs text-ink/55">跑量与爬升，比时间倒计时更能反映备赛执行</p>
         <div className="mt-3 grid grid-cols-2 gap-4">
-          <div><div className="flex flex-wrap justify-between gap-1 text-xs"><span className="text-ink/65">本周跑量</span><span className="font-medium">— / {goals.weeklyRunKm ? `${goals.weeklyRunKm} km` : '未设目标'}</span></div><MicroProgress percent={null} label="跑量未接入" /></div>
-          <div><div className="flex flex-wrap justify-between gap-1 text-xs"><span className="text-ink/65">本周爬升</span><span className="font-medium">— / {goals.weeklyAscentM ? `${goals.weeklyAscentM} m` : '未设目标'}</span></div><MicroProgress percent={null} label="爬升未接入" /></div>
+          <div><div className="flex flex-wrap justify-between gap-1 text-xs"><span className="text-ink/65">本周跑量</span><span className="font-medium">{hasRun ? `${week.runKm.toFixed(2)} / ` : '— / '}{goals.weeklyRunKm ? `${goals.weeklyRunKm} km` : '未设目标'}</span></div><MicroProgress percent={hasRun && runTarget>0 ? week.runKm/runTarget*100 : null} label="本周跑量完成进度" /></div>
+          <div><div className="flex flex-wrap justify-between gap-1 text-xs"><span className="text-ink/65">本周爬升</span><span className="font-medium">{hasRun && !week.missingAscent ? `${Math.round(week.ascentM)} / ` : '— / '}{goals.weeklyAscentM ? `${goals.weeklyAscentM} m` : '未设目标'}</span></div><MicroProgress percent={hasRun && !week.missingAscent && ascentTarget>0 ? week.ascentM/ascentTarget*100 : null} label="本周爬升完成进度" /></div>
         </div>
-        <p className="mt-2 text-xs leading-5 text-ink/55">COROS 运动记录尚未接入本站，实际值和进度不推测、不填零。</p>
+        <p className="mt-2 text-xs leading-5 text-ink/55">{coros.error ? `COROS 记录读取失败：${coros.error}` : coros.loading ? "正在读取训练记录…" : hasRun ? `COROS 已导入 ${coros.activities.length} 条历史训练，尚未实现自动更新。跑量仅统计跑步；爬升包含山地徒步。` : "尚无 COROS 训练记录；不能把未知进度当作零。"}</p>
       </div>
       <div>
         <h3 className="text-sm font-semibold">体重与体脂 <span className="ml-1 text-xs font-normal text-ink/50">小米 S800</span></h3>
