@@ -43,28 +43,49 @@ export function baseEnv(){
   return {base,key,owner};
 }
 function isTrustedCorosUrl(value:string){try{const u=new URL(value);return u.protocol==='https:' && (u.hostname==='coros.com'||u.hostname.endsWith('.coros.com'));}catch{return false;}}
-export async function discover():Promise<OAuthMetadata> {
+export type DiscoveredOAuth = { metadata:OAuthMetadata; metadataUrl:string; issuerOrigin:string };
+// Fail closed: never synthesize /authorize, /token or /register endpoints.
+export async function discoverOAuth():Promise<DiscoveredOAuth> {
   const origin=new URL(mcpEndpoint).origin;
-  let servers:string[]=[origin];
-  for(const link of [origin+'/.well-known/oauth-protected-resource/mcp',origin+'/.well-known/oauth-protected-resource']) {
-    try{const r=await fetch(link,{cache:'no-store',signal:AbortSignal.timeout(7000)});
-      if(r.ok){const json=await r.json() as {authorization_servers?:string[]};
-        servers=[...(json.authorization_servers||[]).filter(isTrustedCorosUrl),...servers];break;}
-    }catch{}
+  const resourceUrls=[origin+'/.well-known/oauth-protected-resource/mcp',origin+'/.well-known/oauth-protected-resource'];
+  const servers:string[]=[];
+  for (const link of resourceUrls){
+    try {
+      const r=await fetch(link,{cache:'no-store',redirect:'error',signal:AbortSignal.timeout(7000)});
+      if(!r.ok)continue;
+      const j=await r.json() as {authorization_servers?:unknown};
+      if(Array.isArray(j.authorization_servers)) for(const candidate of j.authorization_servers){
+        if(typeof candidate==='string' && isTrustedCorosUrl(candidate) && !servers.includes(candidate)) servers.push(candidate);
+      }
+    } catch { /* Try the next official metadata URL. */ }
   }
-  for(const server of servers){
-    const root=new URL(server).origin;
-    const candidates=[root+'/.well-known/oauth-authorization-server',root+'/.well-known/openid-configuration'];
-    for(const addr of candidates){
-      try{const r=await fetch(addr,{cache:'no-store',signal:AbortSignal.timeout(7000)});
-        if(r.ok){const m=await r.json() as OAuthMetadata;
-          if(m.authorization_endpoint&&m.token_endpoint&&isTrustedCorosUrl(m.authorization_endpoint)&&isTrustedCorosUrl(m.token_endpoint)&&(!m.registration_endpoint||isTrustedCorosUrl(m.registration_endpoint)))return m;}
-      }catch{}
+  // Discovery is still allowed on the trusted region itself if protected-resource metadata is absent.
+  if(!servers.includes(origin)) servers.push(origin);
+  for(const issuer of servers){
+    const parsed=new URL(issuer);
+    const issuerPath=parsed.pathname.replace(/\/$/,'');
+    const locations=[
+      parsed.origin+'/.well-known/oauth-authorization-server'+issuerPath,
+      parsed.origin+'/.well-known/oauth-authorization-server',
+      parsed.origin+'/.well-known/openid-configuration'+issuerPath,
+      parsed.origin+'/.well-known/openid-configuration',
+    ];
+    for(const addr of [...new Set(locations)]){
+      try {
+        const r=await fetch(addr,{cache:'no-store',redirect:'error',signal:AbortSignal.timeout(7000)});
+        if(!r.ok)continue;
+        const meta=await r.json() as OAuthMetadata;
+        if(typeof meta.authorization_endpoint!=='string'||typeof meta.token_endpoint!=='string')continue;
+        if(!isTrustedCorosUrl(meta.authorization_endpoint)||!isTrustedCorosUrl(meta.token_endpoint))continue;
+        if(meta.registration_endpoint && !isTrustedCorosUrl(meta.registration_endpoint))continue;
+        return {metadata:meta,metadataUrl:addr,issuerOrigin:parsed.origin};
+      } catch { /* A malformed response must not become an invented OAuth URL. */ }
     }
   }
-  // MCP OAuth discovery fallback. This must still be verified against the user's COROS region.
-  return {authorization_endpoint:origin+'/authorize',token_endpoint:origin+'/token',registration_endpoint:origin+'/register'};
+  throw new Error('COROS_OAUTH_METADATA_UNAVAILABLE');
 }
+// Backward-compatible narrow export for other call sites.
+export async function discover():Promise<OAuthMetadata>{return (await discoverOAuth()).metadata;}
 export async function registerClient(meta:OAuthMetadata, redirect:string):Promise<OAuthClient> {
   if (!meta.registration_endpoint || !isTrustedCorosUrl(meta.registration_endpoint)) throw new Error('COROS_OAUTH_REGISTRATION_UNAVAILABLE');
   const r=await fetch(meta.registration_endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({client_name:'WendyInMotion Private Health Lab',redirect_uris:[redirect],grant_types:['authorization_code','refresh_token'],response_types:['code'],token_endpoint_auth_method:'none'}),cache:'no-store',signal:AbortSignal.timeout(12000)});
