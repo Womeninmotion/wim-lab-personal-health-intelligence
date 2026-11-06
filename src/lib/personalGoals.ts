@@ -12,6 +12,7 @@ export type PersonalGoals = {
   goalBodyFat: string;
   weeklyRunKm: string;
   weeklyAscentM: string;
+  targetWeekStart: string;
 };
 
 export const defaultPersonalGoals: PersonalGoals = {
@@ -26,6 +27,7 @@ export const defaultPersonalGoals: PersonalGoals = {
   goalBodyFat: "",
   weeklyRunKm: "",
   weeklyAscentM: "",
+  targetWeekStart: "",
 };
 
 export function readPersonalGoals(): PersonalGoals {
