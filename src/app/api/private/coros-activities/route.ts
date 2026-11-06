@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getVerifiedOwner } from '@/lib/server-auth';
+import { readConnection } from '@/lib/coros-oauth';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 type Activity = { coros_label_id:string; sport_type:number; activity_type:string; started_at:string; distance_km:number; ascent_m:number|null; duration_seconds:number|null; imported_at:string; import_method:string };
@@ -18,6 +19,8 @@ export async function GET() {
     const result=await fetch(url,{headers:{apikey:key,Authorization:`Bearer ${key}`},cache:'no-store',signal:AbortSignal.timeout(10000)});
     if(!result.ok) return NextResponse.json({error:'database_read_failed'},{status:502});
     const activities=await result.json() as Activity[];
-    return NextResponse.json({activities,source:'COROS',connectionStatus:'historical_import_only',lastImportAt:activities.reduce<string|null>((latest,a)=>!latest||a.imported_at>latest?a.imported_at:latest,null)},{headers:{'Cache-Control':'private, no-store','X-Robots-Tag':'noindex'}});
+    let conn:null|Record<string,unknown>=null;
+    try{conn=await readConnection()}catch{}
+    return NextResponse.json({activities,source:'COROS',connectionStatus:conn?'oauth_authorized':'historical_import_only',lastSyncAt:conn?.last_success_at??null,lastImportAt:activities.reduce<string|null>((latest,a)=>!latest||a.imported_at>latest?a.imported_at:latest,null)},{headers:{'Cache-Control':'private, no-store','X-Robots-Tag':'noindex'}});
   } catch {return NextResponse.json({error:'database_unreachable'},{status:502});}
 }

@@ -6,14 +6,16 @@ export function useCorosActivities(){
  const [loading,setLoading]=useState(true);
  const [error,setError]=useState('');
  const [lastImportAt,setLastImportAt]=useState<string|null>(null);
+ const [lastSyncAt,setLastSyncAt]=useState<string|null>(null);
+ const [connectionStatus,setConnectionStatus]=useState<'oauth_authorized'|'historical_import_only'>('historical_import_only');
  const reload=useCallback(async()=>{
   setLoading(true);setError('');
-  try{const r=await fetch('/api/private/coros-activities',{cache:'no-store',credentials:'same-origin'});if(!r.ok)throw new Error(r.status===401?'登录已过期':'COROS 记录读取失败');const data=await r.json();setActivities(Array.isArray(data.activities)?data.activities:[]);setLastImportAt(data.lastImportAt??null)}catch(e){setError(e instanceof Error?e.message:'网络异常')}finally{setLoading(false)}
+  try{const r=await fetch('/api/private/coros-activities',{cache:'no-store',credentials:'same-origin'});if(!r.ok)throw new Error(r.status===401?'登录已过期':'COROS 记录读取失败');const data=await r.json();setActivities(Array.isArray(data.activities)?data.activities:[]);setLastImportAt(data.lastImportAt??null);setLastSyncAt(data.lastSyncAt??null);setConnectionStatus(data.connectionStatus==='oauth_authorized'?'oauth_authorized':'historical_import_only')}catch(e){setError(e instanceof Error?e.message:'网络异常')}finally{setLoading(false)}
  },[]);
  useEffect(()=>{void reload();const onFocus=()=>{if(document.visibilityState==='visible')void reload()};document.addEventListener('visibilitychange',onFocus);return()=>document.removeEventListener('visibilitychange',onFocus)},[reload]);
- return {activities,loading,error,lastImportAt,reload};
+ return {activities,loading,error,lastImportAt,lastSyncAt,connectionStatus,reload};
 }
-function shanghaiDate(d:Date){const p=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(d);const get=(type:string)=>p.find(x=>x.type===type)?.value??'';return `${get('year')}-${get('month')}-${get('day')}`;}
+export function shanghaiDate(d:Date){const p=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(d);const get=(type:string)=>p.find(x=>x.type===type)?.value??'';return `${get('year')}-${get('month')}-${get('day')}`;}
 export function weeklyRunAndAscent(activities:CorosActivity[],date=new Date()){
  const day=shanghaiDate(date);
  const d=new Date(`${day}T12:00:00+08:00`);
@@ -30,4 +32,17 @@ export function weeklyRunAndAscent(activities:CorosActivity[],date=new Date()){
  const missingAscent=ascentActivities.some(a=>a.ascent_m==null);
  const ascentM=ascentActivities.reduce((s,a)=>s+(a.ascent_m==null?0:Number(a.ascent_m)),0);
  return {runKm,ascentM,missingAscent,weekStart:start,activities:active};
+}
+
+export function weekStartShanghai(date=new Date()):string {
+ const day=shanghaiDate(date);
+ const d=new Date(`${day}T12:00:00+08:00`);
+ const monday=new Date(d.getTime()-((d.getUTCDay()+6)%7)*86400000);
+ return shanghaiDate(monday);
+}
+export function priorWeekRunAndAscent(activities:CorosActivity[],date=new Date()) {
+ return weeklyRunAndAscent(activities,new Date(date.getTime()-7*86400000));
+}
+export function isTrainingGoalActive(targetWeekStart:string|undefined,date=new Date()) {
+ return Boolean(targetWeekStart && targetWeekStart===weekStartShanghai(date));
 }

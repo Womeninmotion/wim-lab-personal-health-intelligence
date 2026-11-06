@@ -2,10 +2,12 @@
 
 import { useClientClock } from "@/lib/useClientDate";
 import { usePersonalGoals } from "@/lib/usePersonalGoals";
+import { useCorosActivities } from "@/lib/useCorosActivities";
 
 export function MorningGreeting() {
   const clock = useClientClock();
   const { goals } = usePersonalGoals();
+  const coros = useCorosActivities();
   const greeting = clock?.greeting ?? "你好";
   return (
     <header className="pb-7 md:pb-8">
@@ -19,7 +21,7 @@ export function MorningGreeting() {
       <p className="mt-3 max-w-2xl text-[15px] leading-7 text-ink/70">
         先看看目标走到哪儿，再回顾昨天，决定今天做什么。
       </p>
-      <p className="mt-3 text-xs text-ink/55">{clock?.dateText ?? ""} · 已接入 Mi Fitness 的身体测量；COROS 训练、RingConn 睡眠等尚待接入。</p>
+      <p className="mt-3 text-xs text-ink/55">{clock?.dateText ?? ""} · Mi Fitness 已入库；{coros.connectionStatus==='oauth_authorized'?'COROS 已授权，具体同步状态见 Me':'COROS 仅历史记录，自动同步待接入'}；RingConn 睡眠尚待接入本站。</p>
     </header>
   );
 }
